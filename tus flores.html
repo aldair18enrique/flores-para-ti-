@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Para Ti</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: #050510; overflow: hidden;
+            font-family: 'Georgia', serif;
+        }
+        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 2; }
+        
+        #overlay-text {
+            position: absolute; top: 10%; width: 80%; left: 10%;
+            text-align: center; color: #fff; z-index: 10;
+            font-size: 1.2rem; line-height: 1.5;
+            text-shadow: 0 0 15px rgba(255,255,255,0.7);
+            opacity: 0; transition: opacity 4s ease-in;
+            font-style: italic;
+        }
+
+        .star {
+            position: absolute; background: white; border-radius: 50%;
+            z-index: 1; animation: twinkle var(--d) infinite;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="overlay-text">
+        Sé que te gustan mucho las flores, por eso te hice estas que nunca se marchitan para que siempre estén para ti así como yo siempre voy a estar.
+    </div>
+    
+    <canvas id="flowerCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('flowerCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, flowers = [], particles = [];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        function createStars() {
+            for (let i = 0; i < 100; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--d', (Math.random() * 3 + 2) + 's');
+                document.body.appendChild(star);
+            }
+        }
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = -20;
+                this.size = Math.random() * 5 + 2;
+                this.speedY = Math.random() * 1 + 0.5;
+                this.speedX = Math.random() * 1 - 0.5;
+                this.color = '#ff4d6d';
+                this.opacity = Math.random() * 0.5 + 0.5;
+            }
+            update() {
+                this.y += this.speedY;
+                this.x += this.speedX;
+                if (this.y > height) this.y = -20;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.translate(this.x, this.y);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size, this.size/2, Math.PI/4, 0, Math.PI*2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Flower {
+            constructor(x, y, angle, length, color) {
+                this.x = x; this.y = y; this.angle = angle;
+                this.targetLen = length; this.len = 0;
+                this.bloom = 0; this.color = color;
+                this.grown = false;
+            }
+            draw() {
+                const endX = this.x + Math.cos(this.angle) * this.len;
+                const endY = this.y + Math.sin(this.angle) * this.len;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.quadraticCurveTo(this.x, this.y - this.len/2, endX, endY);
+                ctx.strokeStyle = '#1a4314'; ctx.lineWidth = 4; ctx.stroke();
+                if (this.len < this.targetLen) this.len += 3;
+                else if (this.bloom < 1) this.bloom += 0.02;
+                else this.grown = true;
+                if (this.bloom > 0) this.drawTulip(endX, endY, this.bloom);
+            }
+            drawTulip(x, y, scale) {
+                ctx.save();
+                ctx.translate(x, y); ctx.scale(scale, scale);
+                ctx.rotate(this.angle + Math.PI/2);
+                ctx.shadowBlur = 15; ctx.shadowColor = this.color;
+                
+                // Pétalo central con degradado
+                let grd = ctx.createLinearGradient(0, -20, 0, 0);
+                grd.addColorStop(0, '#fff'); grd.addColorStop(1, this.color);
+                ctx.fillStyle = grd;
+                ctx.beginPath(); ctx.ellipse(0, -15, 12, 25, 0, 0, Math.PI*2); ctx.fill();
+
+                // Pétalos laterales
+                ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.ellipse(-10, -10, 10, 20, -0.3, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(10, -10, 10, 20, 0.3, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function drawBow(x, y) {
+            ctx.save();
+            ctx.fillStyle = '#d90429';
+            // Lazo izquierdo
+            ctx.beginPath(); ctx.ellipse(x - 25, y, 30, 18, -0.5, 0, Math.PI*2); ctx.fill();
+            // Lazo derecho
+            ctx.beginPath(); ctx.ellipse(x + 25, y, 30, 18, 0.5, 0, Math.PI*2); ctx.fill();
+            // Nudo
+            ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI*2); ctx.fill();
+            // Cintas
+            ctx.lineWidth = 6; ctx.strokeStyle = '#d90429';
+            ctx.beginPath(); ctx.moveTo(x-5, y+5); ctx.lineTo(x-20, y+60); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x+5, y+5); ctx.lineTo(x+20, y+60); ctx.stroke();
+            ctx.restore();
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            let allGrown = true;
+            flowers.forEach(f => {
+                f.draw();
+                if (!f.grown) allGrown = false;
+            });
+            if (allGrown) {
+                drawBow(width/2, height - 100);
+                particles.forEach(p => { p.update(); p.draw(); });
+            }
+            requestAnimationFrame(animate);
+        }
+
+        window.onload = () => {
+            resize(); createStars();
+            const colors = ['#ff0a54', '#ff477e', '#ff7096', '#ff85a1', '#fbb1bd'];
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    const angle = -Math.PI/2 + (Math.random() - 0.5) * 1.2;
+                    flowers.push(new Flower(width/2, height, angle, height * 0.45 + Math.random()*50, colors[i%5]));
+                }, i * 200);
+            }
+            for (let i = 0; i < 30; i++) particles.push(new Particle());
+            animate();
+            setTimeout(() => { document.getElementById('overlay-text').style.opacity = 1; }, 2000);
+        };
+    </script>
+</body>
+</html>
